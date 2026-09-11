@@ -1,0 +1,544 @@
+{
+  "name": "1 projeto TechFlow B2B",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Objetivo \nDesenvolver um fluxo no n8n que receba os dados do formulário do site em tempo real, faça a higienização dos dados (evitando duplicidade), qualifique o lead pelo porte da empresa e direcione a notificação para o canal correto.",
+        "height": 128,
+        "width": 608
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -864,
+        -496
+      ],
+      "typeVersion": 1,
+      "id": "e4275fd4-b866-4a2f-9139-6f02a7db6167",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();[cite: 2]\n\nreturn items.map(item => {\n  // Pega os dados originais enviados pelo Webhook\n  const data = $('Webhook').item.json;[cite: 2]\n  \n  // Limpa caracteres não numéricos do telefone\n  const telefoneLimpo = data.telefone ? data.telefone.replace(/\\D/g, '') : '';\n  const qtdFuncionarios = Number(data.qtdFuncionarios) || 0;\n  \n  // Lógica de Porte\n  const isVIP = qtdFuncionarios >= 50;\n  const categoria = isVIP ? 'Lead VIP / Enterprise' : 'Lead SMB / Padrão';\n\n  // Alerta formatado para a equipe técnica/vendas\n  const textoNotificacao = `🚨 *NOVO LEAD VIP DETECTADO* 🚨\\n\\n` +\n                           `🏢 *Empresa:* ${data.empresa || 'Não informada'}\\n` +\n                           `👤 *Contato:* ${data.nome || 'Não informado'}\\n` +\n                           `👥 *Porte:* ${qtdFuncionarios} funcionários\\n` +\n                           `✉️ *E-mail:* ${data.email}\\n` +\n                           `📞 *WhatsApp:* https://wa.me/55${telefoneLimpo}\\n` +\n                           `💬 *Mensagem:* ${data.mensagem || 'Sem mensagem'}`;\n\n  return {\n    json: {\n      timestamp: new Date().toISOString(),\n      nome: data.nome,\n      email: data.email,\n      telefone: telefoneLimpo,\n      empresa: data.empresa,\n      qtdFuncionarios: qtdFuncionarios,\n      mensagem: data.mensagem,\n      categoria: categoria,\n      isVIP: isVIP,\n      mensagemNotificacao: textoNotificacao\n    }\n  };[cite: 2]\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -160
+      ],
+      "id": "619197a9-a6b6-43f9-b466-45480650b8f9",
+      "name": "Leads novos"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-techflow",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -608,
+        80
+      ],
+      "id": "d5053351-85a7-482a-813b-31dd8dfb03bc",
+      "name": "Info Leads",
+      "webhookId": "760a533a-b547-4866-b7af-63bccc8daa3f"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -400,
+        80
+      ],
+      "id": "ad35486b-8cf8-43f7-b73b-05be3cc2cbf0",
+      "name": "Planilha com clientes "
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c0c50884-24b7-41dd-993b-242e56fd4b94",
+              "leftValue": "={{ $json.rowNumber }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -176,
+        80
+      ],
+      "id": "32cbc1cc-2a9a-4472-9235-ef2be76c8e7d",
+      "name": "É antigo ou não"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        272
+      ],
+      "id": "ac3a54b8-c8a7-439f-b064-05e17b6b7e2a",
+      "name": "Cliente antigo"
+    },
+    {
+      "parameters": {
+        "chatId": "tech.flow.group",
+        "text": "={{ $json.mensagemNotificacao }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        -304
+      ],
+      "id": "1f24f561-3e09-4956-b0a1-5529f09da30a",
+      "name": "Grupo de vendas VIP",
+      "webhookId": "edee58dd-7c15-4e8a-9c74-078c2af0a903"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.isVIP }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "f15c8437-e406-4f95-b803-dfebb0d9993e"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        176,
+        -160
+      ],
+      "id": "cedeb0e8-762b-4990-a7db-05439b3fef88",
+      "name": "VIP ou não"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        -304
+      ],
+      "id": "d4d90391-764f-4e05-bd89-8378c234fe8e",
+      "name": "Salva dados VIP"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        16
+      ],
+      "id": "9ecaef94-f935-40bf-b621-0d757d2fca20",
+      "name": "Salva dados SMB"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b8e03bd-c614-4517-b7ab-e4093c7d8392",
+              "name": "data_ultimo_contato",
+              "value": "={{ $now.toISOString() }}",
+              "type": "string"
+            },
+            {
+              "id": "36ea6940-7a85-4d91-b1df-376e9bf3551f",
+              "name": "mensagem_recente",
+              "value": "={{ $('Info Leads').item.json.mensagem }}",
+              "type": "string"
+            },
+            {
+              "id": "1089f4db-0c45-4e84-86be-d701d138da6a",
+              "name": "alerta_cs",
+              "value": "=🚨 REINTERAÇÃO DE CLIENTE EXISTENTE 🚨\n\n👤 Nome: {{ $('Info Leads').item.json.nome }}\n✉️ E-mail: {{ $('Info Leads').item.json.email }}\n🏢 Empresa: {{ $('Info Leads').item.json.empresa }}\n💬 Nova Mensagem: {{ $('Info Leads').item.json.mensagem }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -64,
+        272
+      ],
+      "id": "6760b164-52f2-4e12-b4d2-2fd7894b70aa",
+      "name": "Formata Reinteração"
+    },
+    {
+      "parameters": {
+        "chatId": "Gerente CS",
+        "text": "={{ $json.alerta_cs }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        272
+      ],
+      "id": "748d3898-43b5-428c-b23a-dca00f90bcb4",
+      "name": "Alerta Gerente CS",
+      "webhookId": "a3926bb3-b9e6-4598-be44-755f7699832f"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Você é o assistente virtual sênior de vendas da TechFlow B2B. Sua missão é escrever uma mensagem de e-mail curta, acolhedora e extremamente profissional para novos leads SMB.\n\nSua mensagem deve:\n1. Cumprimentar o cliente pelo primeiro nome.\n2. Reconhecer o interesse dele e apresentar a solução Starter da TechFlow.\n3. Deixar um call-to-action claro convidando-o a concluir a contratação no nosso checkout self-service.\n4. Manter tom consultivo, amigável e direto."
+            },
+            {
+              "content": "=Gere o e-mail de onboarding para este lead:\n- Nome: {{ $('Leads novos').item.json.nome }}\n- Empresa: {{ $('Leads novos').item.json.empresa }}\n- Mensagem: {{ $('Leads novos').item.json.mensagem }}\n- Link do Checkout: https://techflow.b2b/checkout-starter"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        16
+      ],
+      "id": "d5014626-acca-4763-8435-9bd43ce0afef",
+      "name": "Gera Onboarding IA"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Leads novos').item.json.email }}",
+        "subject": "={{ $('Leads novos').item.json.nome }}, conheça o plano Starter da TechFlow!",
+        "emailType": "text",
+        "message": "={{ $json.message.content }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        16
+      ],
+      "id": "c158f22b-f006-4e4e-8ece-e2f48273954c",
+      "name": "Envio Checkout Self-Service",
+      "webhookId": "1ce54c33-fd5f-4ce3-9579-bf4ac8744524"
+    },
+    {
+      "parameters": {
+        "content": "## Objetivo \nCaptura & Validação de Base",
+        "height": 240,
+        "width": 688
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -768,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "824ffbfb-7def-4cf9-9b98-9b05441d39f2",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Objetivo \nReinteração de Cliente Existente (Retenção / CS)",
+        "height": 128,
+        "width": 688
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "10a6725e-e3d2-4eb6-83a8-7908911e4b33",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Objetivo \nRoteamento Inbound VIP (Vendas High-Touch)",
+        "height": 128,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        400,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "042875ae-7a66-4735-b9eb-be69a665bb64",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Objetivo \nAtendimento Automático & Vendas Self-Service (IA + Email)",
+        "height": 272,
+        "width": 752
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "1869a6c6-9a2b-4556-b16c-4f341c43745f",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {
+    "Info Leads": [
+      {
+        "json": {
+          "nome": "Amanda Costa",
+          "email": "amanda.costa@empresa.com.br",
+          "telefone": "(11) 99887-6655",
+          "empresa": "TechCorp Soluções",
+          "qtdFuncionarios": 120,
+          "mensagem": "Gostaria de agendar uma demonstração da plataforma."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Info Leads": {
+      "main": [
+        [
+          {
+            "node": "Planilha com clientes ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads novos": {
+      "main": [
+        [
+          {
+            "node": "VIP ou não",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planilha com clientes ": {
+      "main": [
+        [
+          {
+            "node": "É antigo ou não",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É antigo ou não": {
+      "main": [
+        [
+          {
+            "node": "Leads novos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formata Reinteração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VIP ou não": {
+      "main": [
+        [
+          {
+            "node": "Salva dados VIP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salva dados SMB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salva dados VIP": {
+      "main": [
+        [
+          {
+            "node": "Grupo de vendas VIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formata Reinteração": {
+      "main": [
+        [
+          {
+            "node": "Cliente antigo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cliente antigo": {
+      "main": [
+        [
+          {
+            "node": "Alerta Gerente CS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salva dados SMB": {
+      "main": [
+        [
+          {
+            "node": "Gera Onboarding IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gera Onboarding IA": {
+      "main": [
+        [
+          {
+            "node": "Envio Checkout Self-Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "22c76fdd-73a7-42b1-bc4c-eadc0dc8bbdd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "06923734eef36be1e56ac5f43d412d4f3a379411f54bed51a1569d93233bdb82"
+  },
+  "nodeGroups": [],
+  "id": "9uTUGOO6qiFbdYr5",
+  "tags": []
+}

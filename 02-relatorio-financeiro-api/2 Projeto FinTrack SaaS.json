@@ -1,0 +1,232 @@
+{
+  "name": "2 Projeto FinTrack SaaS",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Objetivo\nCriar um fluxo no n8n que execute rodadas agendadas diárias, consuma transações financeiras de uma API, processe os dados brutos calculando métricas-chave de vendas e notifique a equipe com o relatório consolidados, tratando exceções de API de forma resiliente.\n\n",
+        "height": 112,
+        "width": 1040
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -608,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "e7755016-f1cc-4396-9682-2dbecb3f15cc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -448,
+        -160
+      ],
+      "id": "26bce9b5-9dd4-4112-8b95-40d87185528d",
+      "name": "Gatilho Agendado"
+    },
+    {
+      "parameters": {
+        "url": "https://api.fintrack.com/v1/transactions/yesterday",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -256,
+        -160
+      ],
+      "id": "2ddc4b90-45bf-40b3-9152-42b549469899",
+      "name": "API FinTrack"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtém todas as transações retornadas pela API REST\nconst inputItems = $input.all();\n\n// Converte a lista de itens da entrada em um array simples de objetos JSON\nconst transacoes = inputItems.map(item => item.json);\n\n// 1. Filtrar apenas transações com status \"APPROVED\"\nconst transacoesAprovadas = transacoes.filter(t => t.status === 'APPROVED');\n\n// 2. Cálculos Globais\nconst totalTransacoes = transacoes.length;\nconst qtdAprovadas = transacoesAprovadas.length;\n\n// Soma o total faturado das vendas aprovadas\nconst totalFaturado = transacoesAprovadas.reduce((acc, t) => acc + (Number(t.valor) || 0), 0);\n\n// Média de valor por venda aprovada (Tíquete Médio)\nconst tiqueteMedio = qtdAprovadas > 0 ? (totalFaturado / qtdAprovadas) : 0;\n\n// Taxa de Aprovação em porcentagem\nconst taxaAprovacao = totalTransacoes > 0 ? ((qtdAprovadas / totalTransacoes) * 100) : 0;\n\n// Data de referência (ontem no formato YYYY-MM-DD)\nconst ontem = new Date();\nontem.setDate(ontem.getDate() - 1);\nconst dataRelatorio = ontem.toISOString().split('T')[0];\n\n// 3. Formatação e Estruturação do Payload Limpo\nconst relatorio = {\n  data_relatorio: dataRelatorio,\n  total_faturado: totalFaturado,\n  total_faturado_formatado: `R$ ${totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,\n  qtd_total_transacoes: totalTransacoes,\n  qtd_vendas_aprovadas: qtdAprovadas,\n  tiquete_medio: Number(tiqueteMedio.toFixed(2)),\n  tiquete_medio_formatado: `R$ ${tiqueteMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,\n  taxa_aprovacao_pct: Number(taxaAprovacao.toFixed(2)),\n  taxa_aprovacao_formatada: `${taxaAprovacao.toFixed(2)}%`,\n  processado_em: new Date().toISOString()\n};\n\nreturn [{ json: relatorio }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        -160
+      ],
+      "id": "7dcae74b-7e79-4d67-9118-e8d53777d054",
+      "name": "Consolidador Financeiro"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "c5045fc0-1126-4e13-81e9-72cf4ac888a6",
+      "name": "Relatórios Diários"
+    },
+    {
+      "parameters": {
+        "chatId": "FinTrack_Diretoria",
+        "text": "=📊 RELATÓRIO FINANCEIRO DIÁRIO - FINTRACK 📊 📅 Data Referência: {{ $json.data_relatorio }}  💰 Total Faturado: {{ $json.total_faturado_formatado }} 🛒 Vendas Aprovadas: {{ $json.qtd_vendas_aprovadas }} de {{ $json.qtd_total_transacoes }} 🎯 Tíquete Médio: {{ $json.tiquete_medio_formatado }} 📈 Taxa de Aprovação: {{ $json.taxa_aprovacao_formatada }}  Relatório processado automaticamente às {{ $json.processado_em }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        -160
+      ],
+      "id": "15a49d9c-1fe5-4cc3-a5a8-b69adc86a0d6",
+      "name": "Notificação Diretoria",
+      "webhookId": "b71c4c8e-7f52-4a47-ad1f-64ac52a6ae33"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        144
+      ],
+      "id": "60b34bd0-5006-4028-90dc-0a0a7828e833",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "FinTrack_TI",
+        "text": "=🚨 ALERTA DE ERRO NA AUTOMAÇÃO (FINTRACK) 🚨  ⚙️ Workflow: {{ $workflow.name }} 🆔 ID de Execução: {{ $execution.id }} ❌ Nó com Falha: {{ $json.execution.error.node.name }} 💬 Mensagem de Erro: {{ $json.execution.error.message }}  _Verifique as credenciais ou a disponibilidade da API REST._",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        144
+      ],
+      "id": "44fdaf81-e4dd-41a5-8bc1-0a88ca259701",
+      "name": "Alerta TI - Erro Execução",
+      "webhookId": "51698756-bbce-467d-a93a-c4c588e42cce"
+    },
+    {
+      "parameters": {
+        "content": "## Fluxo\nAgendamento, informações da api, tratamento dos dados, guardar informações e enviar notificação.\n",
+        "height": 96,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "619df2a5-3bd3-4b48-bbd8-5701b2bbe90a",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Verificação\nSe houver erro na api, informar ao grupo de TI da empresa.",
+        "height": 96,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "7a16e2c9-031f-48d3-9277-4dce05f7a7cc",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gatilho Agendado": {
+      "main": [
+        [
+          {
+            "node": "API FinTrack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API FinTrack": {
+      "main": [
+        [
+          {
+            "node": "Consolidador Financeiro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidador Financeiro": {
+      "main": [
+        [
+          {
+            "node": "Relatórios Diários",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relatórios Diários": {
+      "main": [
+        [
+          {
+            "node": "Notificação Diretoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Alerta TI - Erro Execução",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d60247f3-5d41-486c-9d62-82cfe1cbee71",
+  "meta": {
+    "instanceId": "06923734eef36be1e56ac5f43d412d4f3a379411f54bed51a1569d93233bdb82"
+  },
+  "nodeGroups": [],
+  "id": "HEdZ01VlzkqbC0AX",
+  "tags": []
+}

@@ -1,0 +1,225 @@
+{
+  "name": "3 projeto AutoSupport",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Objetivo\nCriar um Agente de IA Autônomo no n8n que receba mensagens do usuário, consulte uma base de conhecimento privada (documentação/manuais) usando técnicas de RAG (Retrieval-Augmented Generation) para responder dúvidas técnicas com precisão, e execute Tools (ferramentas) no n8n — como buscar disponibilidade em calendário ou salvar novos leads automaticamente.",
+        "height": 128,
+        "width": 1040
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -608,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "179d1a3e-71d9-44bb-bb05-a808ca76166a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Você é o AutoBot, o especialista de suporte técnico de Nível 1 da AutoSupport AI. Seu objetivo é ajudar os clientes de forma educada, precisa e ágil.\n\nDIRETRIZES DE ATUAÇÃO:\n1. USO DE BASE DE CONHECIMENTO (RAG): Para dúvidas sobre manuais, produtos ou solução de problemas técnicos, consulte a ferramenta de documentação interna antes de responder.\n2. USO DE FERRAMENTAS (TOOLS): Se o usuário solicitar agendamento de reunião técnica ou atendimento humano, utilize a ferramenta de agendamento/registro de contatos.\n3. LIMITES DE CONHECIMENTO: Se não encontrar a resposta na base de conhecimento, oriente o usuário a agendar um atendimento humano usando a ferramenta.\n4. TOM DE VOZ: Mantenha um tom profissional, amigável e direto.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -256,
+        -128
+      ],
+      "id": "b6d61ce4-9859-444a-8bd5-9ff0778055ed",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -480,
+        -128
+      ],
+      "id": "ac9b8263-be1d-4c10-8793-d2be11903a26",
+      "name": "Mensagem recebida",
+      "webhookId": "ccb2093e-486b-4767-a963-d4eee88de866"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        96
+      ],
+      "id": "71a4123d-f0e2-4298-853f-b53e25b0064d",
+      "name": "Modelo Gemini"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -352,
+        96
+      ],
+      "id": "f6c6598c-08c2-458e-823f-86bd64959f32",
+      "name": "Memória Conversacional"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Utilize esta ferramenta para buscar respostas sobre manuais de produtos, especificações técnicas e solução de dúvidas de clientes.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -240,
+        96
+      ],
+      "id": "abc4b388-a0fb-4f2a-8abb-18b7afe880df",
+      "name": "Base para dúvidas técnicas"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Utilize esta ferramenta para agendar reuniões técnicas com o suporte de Nível 2 ou registrar solicitações de contato humano.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        32,
+        96
+      ],
+      "id": "ca945885-5f9d-44cc-8a41-193744e4bd65",
+      "name": "Agenda suporte humano"
+    },
+    {
+      "parameters": {
+        "content": "## Fluxo\nMensagem recebida pelo agente de ia, alimentado pelo LLM gemini, utiliza memória singular para cada cliente, integra o banco de dados da empresa e salva informações valiosas. ",
+        "height": 176,
+        "width": 352
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        -32
+      ],
+      "typeVersion": 1,
+      "id": "daf441ea-2ae8-44b6-b7e9-75ab71409217",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        224
+      ],
+      "id": "c273b690-471c-417b-8b46-ab168e881bd0",
+      "name": "Gerador de Embeddings"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Mensagem recebida": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória Conversacional": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base para dúvidas técnicas": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agenda suporte humano": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerador de Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Base para dúvidas técnicas",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a6538cc6-62e0-4342-8861-3b790de66eee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "06923734eef36be1e56ac5f43d412d4f3a379411f54bed51a1569d93233bdb82"
+  },
+  "nodeGroups": [],
+  "id": "lK8UtHObMHwIlCUi",
+  "tags": []
+}

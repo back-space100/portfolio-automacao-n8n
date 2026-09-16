@@ -6,9 +6,9 @@ Bem-vindo ao meu repositório de automação de processos e integração de sist
 
 | Nível | Projeto | Tecnologias / Nós Usados | Status |
 | :--- | :--- | :--- | :--- |
-| **Básico** | Captura de Leads e Notificação Multi-canal | Webhook, Switch, Google Sheets, Slack/WhatsApp | 🟡 Em Breve |
-| **Intermediário** | Consolidador de Dados Financeiros via API | Cron, HTTP Request, Code Node (JS), Error Trigger | 🟡 Em Breve |
-| **Avançado** | Agente de Suporte e Qualificação com IA | Webhook, OpenAI API, Structured Output, CRM | 🟡 Em Breve |
+| **Básico** | Captura de Leads e Notificação Multi-canal | Webhook, Switch, Google Sheets, Slack/WhatsApp | 🟢 Concluido |
+| **Intermediário** | Consolidador de Dados Financeiros via API | Cron, HTTP Request, Code Node (JS), Error Trigger | 🟢 Concluido |
+| **Avançado** | Agente de Suporte e Qualificação com IA | Webhook, OpenAI API, Structured Output, CRM | 🟢 Concluido |
 
 ## 🛠️ Tech Stack & Ferramentas
 - **Orquestração:** n8n

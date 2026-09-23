@@ -10,7 +10,7 @@ Desenvolvimento de um pipeline de dados agendado no **n8n** que consome dados br
 
 ## 📐 Arquitetura do Fluxo
 
-![Arquitetura do Fluxo no n8n](fluxo-n8n2.png)
+![Arquitetura do Fluxo no n8n](fluxo-n8n2.jpeg)
 
 ### 🔄 Lógica de Funcionamento:
 
